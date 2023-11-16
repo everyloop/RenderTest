@@ -1,0 +1,6 @@
+dash==2.14.1
+plotly_express==0.4.1
+seaborn==0.13.0
+gunicorn
+pandas
+dash-tools
