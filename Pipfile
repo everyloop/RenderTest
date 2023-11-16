@@ -7,6 +7,7 @@ name = "pypi"
 seaborn = "*"
 plotly-express = "*"
 dash = "*"
+dash-bootstrap-templates = "*"
 
 [dev-packages]
 dash-tools = "*"
