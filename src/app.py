@@ -1,4 +1,4 @@
-from dash import Dash, dash_table, html, dcc, callback, Output, Input, State
+from dash import Dash, dash_table, html, dcc, callback, Output, Input, State, ctx
 import dash_bootstrap_components as dbc
 import plotly_express as px
 from dash_bootstrap_templates import load_figure_template
@@ -50,12 +50,25 @@ app.layout = dbc.Container([
             html.Br(),
             html.H2("MSFT", id="data_label",
                     className='text-start text-primary mb-4 mt-3'),
-            dash_table.DataTable(id="data_table", page_size=15),
-            dbc.Button([
-                    html.I(className='fa fa-download fa-bounce me-2'),
-                    "Download data"
-                ], color="primary", className='my-4', id='download_button'),
+        ], width={'size': 5, 'offset': 1}),
+        dbc.Col([
+            html.Br(),
+            html.Br(),
+            dbc.DropdownMenu([
+                dbc.DropdownMenuItem("Download as CSV", id='download_csv'),
+                dbc.DropdownMenuItem("Download as JSON", id='download_json'),
+                dbc.DropdownMenuItem("Download as XML", id='download_xml'),
+            ], label=html.Span([
+                html.I(className='fa fa-download fa-bounce me-2'),
+                "Download data "
+            ]), direction="down"),
             dcc.Download(id='downloader')
+        ], width={'size': 5, 'offset': 0}, style={'text-align': 'right'})
+    ], justify='start'),
+
+    dbc.Row([
+        dbc.Col([
+            dash_table.DataTable(id="data_table", page_size=15)
         ], width=10)
     ], justify='evenly')
 
@@ -71,8 +84,9 @@ app.layout = dbc.Container([
 )
 def update_volume_graph(start, end, symbol):
     df = stocks.query("Symbols==@symbol").loc[start:end]
-    data = df.reset_index().drop(columns=["Symbols"]).to_dict('records')
     fig = px.line(df, x=df.index, y="Volume")
+    data = df.reset_index().drop(columns=["Symbols"]).to_dict('records')
+    
     return data, fig, symbol
 
 @callback(
@@ -87,18 +101,36 @@ def update_closing_graph(start,end, symbols):
 
 @callback(
     Output("downloader", "data"),
-    Input("download_button", "n_clicks"),
+    Input("download_csv", "n_clicks"),
+    Input("download_json", "n_clicks"),
+    Input("download_xml", "n_clicks"),
     State("date_picker", "start_date"),
     State("date_picker", "end_date"),
     State("single_dropdown", "value"),
     prevent_initial_call=True
 )
-def download_button_clicked(n, start, end, symbol):
+def download_button_clicked(n1, n2, n3, start, end, symbol):
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
     df = stocks.query("Symbols==@symbol").loc[start:end]
     data = df.reset_index().drop(columns=["Symbols"])
+    data['Date'] = data['Date'].dt.strftime('%Y-%m-%d')
+
+    if trigger_id=="download_csv":
+        content = data.to_csv(index=False)
+        extension = 'csv'
+    elif trigger_id=="download_json":
+        content = data.to_json(orient='records')
+        extension = 'json'
+    else:
+        content = data.to_xml(index=False)
+        extension = 'xml'
+    
+    if start is None: start = data.iloc[0, 0]
+    if end is None: end = data.iloc[-1, 0]
+
     return {
-        'content': data.to_csv(index=False),
-        'filename': f'{symbol}.csv'
+        'content': content,
+        'filename': f'{symbol}_{start}_to_{end}.{extension}'
     }
 
 if __name__ == '__main__':
