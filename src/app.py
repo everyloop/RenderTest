@@ -12,12 +12,14 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.FLATLY, dbc.icons.FONT_AWE
                        'content': 'width=device_width, intial-scale=1.0'}]
            )
 
+server = app.server
+
 app.layout = dbc.Container([
     dbc.Row([
         dbc.Col([
             html.H1("Stock Market Dashboard",
                     className='text-center text-primary mb-4 mt-3'),
-            dcc.DatePickerRange(id='date_picker', className='mx-auto mb-4')
+            dcc.DatePickerRange(id='date_picker', className='mx-auto mb-4'),
         ], width=12, style={'text-align': 'center'})
     ], justify="center"),
 
@@ -52,7 +54,8 @@ app.layout = dbc.Container([
             dbc.Button([
                     html.I(className='fa fa-download fa-bounce me-2'),
                     "Download data"
-                ], color="primary", className='my-4')
+                ], color="primary", className='my-4', id='download_button'),
+            dcc.Download(id='downloader')
         ], width=10)
     ], justify='evenly')
 
@@ -81,6 +84,22 @@ def update_volume_graph(start, end, symbol):
 def update_closing_graph(start,end, symbols):
     df = stocks[stocks["Symbols"].isin(symbols)].loc[start:end]
     return px.line(df, x=df.index, y="Close", color="Symbols")
+
+@callback(
+    Output("downloader", "data"),
+    Input("download_button", "n_clicks"),
+    State("date_picker", "start_date"),
+    State("date_picker", "end_date"),
+    State("single_dropdown", "value"),
+    prevent_initial_call=True
+)
+def download_button_clicked(n, start, end, symbol):
+    df = stocks.query("Symbols==@symbol").loc[start:end]
+    data = df.reset_index().drop(columns=["Symbols"])
+    return {
+        'content': data.to_csv(index=False),
+        'filename': f'{symbol}.csv'
+    }
 
 if __name__ == '__main__':
     app.run(debug=True)
