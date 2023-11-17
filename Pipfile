@@ -8,6 +8,7 @@ seaborn = "*"
 plotly-express = "*"
 dash = "*"
 dash-bootstrap-templates = "*"
+ipykernel = "*"
 
 [dev-packages]
 dash-tools = "*"
